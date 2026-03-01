@@ -113,19 +113,16 @@ uint8_t onCenterLine;
 uint8_t orientationFound;
 uint8_t locationFound; 
 
-
+//declaring functions 
 void checkGlobalEvents();
 void handle_stop();
-void handle_find_parallel();
-void handle_corner();
-void handle_find_centreline();
-void handle_forward();
-void handle_back();
-void handle_shoot1();
-void handle_shoot2();
-void handle_shoot3();
-void handle_return_home();
-
+void handle_orientation();
+uint8_t test_for_orient(void);
+void resp_to_orient(void);
+uint8_t test_for_wall(void);
+void resp_to_wall(void);
+uint8_t test_for_center(void);
+void resp_to_center(void);
 uint8_t test_for_hog_line(void);
 void resp_to_hog_lines(void);
 
@@ -275,15 +272,15 @@ void handle_stop(){
 }
 
 void handle_orientation(){
-  stopAll();
+  rotateRight();
 }
 
 void handle_corner(){
-  stopAll();
+  driveBackward();
 }
 
 void handle_find_centreline(){
-  stopAll();
+  strafeRight();
 }
 
 void handle_forward(){
@@ -299,7 +296,7 @@ void handle_shoot2(){ stopAll(); }
 void handle_shoot3(){ stopAll(); }
 
 void handle_return_home(){
-  stopAll();
+  driveBackward();
 }
 
 // Function to calculate the distance from an ultrasonic sensor
