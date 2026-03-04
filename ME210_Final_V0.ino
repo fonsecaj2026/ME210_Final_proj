@@ -2,12 +2,13 @@
 #include <Metro.h>     
 
 // DC Motors for Mecanuum Wheels 
-AF_DCMotor FL(1); // 1
-AF_DCMotor FR(4); // 4
-AF_DCMotor RL(2); // 2
-AF_DCMotor RR(3); // 3
+AF_DCMotor FL(1);
+AF_DCMotor FR(4);
+AF_DCMotor RL(2);
+AF_DCMotor RR(3);
 
 int fast_speed  = 180;  
+int med_speed = 130;
 int slow_speed = 90;    
 
 void stopAll() {
@@ -25,7 +26,11 @@ void setAllSpeed(int spd){
 }
 
 void driveForward(){
-  setAllSpeed(fast_speed);
+  FL.setSpeed(med_speed);
+  FR.setSpeed(fast_speed);
+  RL.setSpeed(med_speed);
+  RR.setSpeed(fast_speed);
+
   FL.run(FORWARD);
   FR.run(FORWARD);
   RL.run(FORWARD);
@@ -40,14 +45,6 @@ void driveBackward(){
   RR.run(BACKWARD);
 }
 
-void strafeLeft(){
-  setAllSpeed(slow_speed);
-  FL.run(FORWARD);
-  FR.run(BACKWARD);
-  RL.run(BACKWARD);
-  RR.run(FORWARD);
-}
-
 void strafeRight(){
   setAllSpeed(fast_speed);
   FL.run(FORWARD);
@@ -56,20 +53,11 @@ void strafeRight(){
   RR.run(FORWARD);
 }
 
-void rotateLeft(){
-  setAllSpeed(fast_speed);
-  FL.run(BACKWARD);
-  FR.run(BACKWARD);
-  RL.run(FORWARD);
-  RR.run(FORWARD);
-}
-
 void rotateRight(){
-  //setAllSpeed(slow_speed);
-  FL.setSpeed(120);
-  FR.setSpeed(120);
-  RL.setSpeed(120);
-  RR.setSpeed(120);
+  FL.setSpeed(fast_speed);
+  FR.setSpeed(fast_speed);
+  RL.setSpeed(fast_speed);
+  RR.setSpeed(fast_speed);
 
   FL.run(FORWARD);
   FR.run(BACKWARD);
