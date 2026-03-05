@@ -34,6 +34,21 @@
 #define TRIG_PIN_2  11
 #define ECHO_PIN_2  12
 
+// Shooter / feeder pins
+#define DRV_EN      4    // enables/disables the DRV8825 stepper driver
+#define SHOOT_PWM   5    // PWM speed control shared by both flywheel motors
+#define SHOOT_HI    6    // shared flywheel motor direction input
+#define SHOOT_LO    7    // shared flywheel motor direction input
+#define DRV_STEP    8    // step pulse output to the DRV8825
+#define DRV_DIR     13   // feeder stepper direction output
+
+// Shooting settings
+#define FLY_SPINUP_MS   1200   // wait time before feeding so flywheels reach speed
+#define FLY_SPEED       200    // flywheel speed from 0 to 255
+#define FEED_DIR        HIGH   // feeder rotation direction
+#define FEED_STEPS      200    // number of step pulses for one feed
+#define STEP_PULSE_US   800    // time between stepper pulse edges
+
 // Wall distance thresholds (cm)
 #define LEFT_WALL  25
 #define BACK_WALL  15
@@ -108,7 +123,7 @@ bool sendMotorCommand(uint8_t cmd) {
   }
 }
 
-// ── Motor command wrappers ───────────────────────────────────
+// ── Motor command wrappers ───────────────────────────────
 void stopAll()       { sendMotorCommand(CMD_STOP);         }
 void driveForward()  { sendMotorCommand(CMD_FORWARD);      }
 void driveBackward() { sendMotorCommand(CMD_BACKWARD);     }
@@ -118,6 +133,36 @@ void rotateRight()   { sendMotorCommand(CMD_ROTATE_RIGHT); }
 void motorBackLeft() { sendMotorCommand(CMD_DIAG_BL);      }
 void veerRight()     { sendMotorCommand(CMD_VEER_RIGHT);   }
 
+// ── Throw helpers ──────────────────────────
+void flywheelsOn() {
+  digitalWrite(SHOOT_HI, HIGH);   // sets flywheel motors to the shooting direction
+  digitalWrite(SHOOT_LO, LOW);
+  analogWrite(SHOOT_PWM, FLY_SPEED); // drives both flywheel motors at the chosen speed
+}
+
+void flywheelsOff() {
+  analogWrite(SHOOT_PWM, 0);      // removes power from both flywheel motors
+  digitalWrite(SHOOT_HI, LOW);
+  digitalWrite(SHOOT_LO, LOW);
+}
+
+void stepperEnable(bool en) {
+  digitalWrite(DRV_EN, en ? LOW : HIGH);  // LOW enables the DRV8825, HIGH disables it
+}
+
+void feedSteps(int steps) {
+  digitalWrite(DRV_DIR, FEED_DIR);  // sets which way the feeder stepper rotates
+  stepperEnable(true);
+
+  for (int i = 0; i < steps; i++) {
+    digitalWrite(DRV_STEP, HIGH);   // one HIGH/LOW pulse = one step pulse to the driver
+    delayMicroseconds(STEP_PULSE_US);
+    digitalWrite(DRV_STEP, LOW);
+    delayMicroseconds(STEP_PULSE_US);
+  }
+
+  stepperEnable(false);
+}
 // ────────────────────────────────────────────────────────────
 //  Setup
 // ────────────────────────────────────────────────────────────
@@ -143,7 +188,24 @@ void setup() {
   pinMode(HOG_LEFT,   INPUT);
   pinMode(HOG_RIGHT,  INPUT);
 
-  stopAll();
+  pinMode(SHOOT_PWM, OUTPUT);   // shooter PWM pin for flywheel speed
+  pinMode(SHOOT_HI, OUTPUT);    // shooter direction pin
+  pinMode(SHOOT_LO, OUTPUT);    // shooter direction pin
+
+  analogWrite(SHOOT_PWM, 0);
+  digitalWrite(SHOOT_HI, LOW);
+  digitalWrite(SHOOT_LO, LOW);
+
+  pinMode(DRV_STEP, OUTPUT);
+  pinMode(DRV_DIR, OUTPUT);
+  pinMode(DRV_EN, OUTPUT);
+  digitalWrite(DRV_STEP, LOW);
+  digitalWrite(DRV_DIR, LOW);
+  digitalWrite(DRV_EN, HIGH);   // keeps the stepper driver off until feeding
+
+  flywheelsOff();               
+  stepperEnable(false);  
+  stopAll();        
   Serial.println("Controller ready – starting FSM");
   state = STATE_ORIENTATION;
 }
@@ -168,6 +230,8 @@ void loop() {
     default:
       Serial.println("Unknown state; halting");
       stopAll();
+      flywheelsOff();               
+      stepperEnable(false);      
       break;
   }
 }
@@ -177,6 +241,8 @@ void loop() {
 // ────────────────────────────────────────────────────────────
 void handle_stop() {
   stopAll();
+  flywheelsOff();      // makes sure the shooter motors are off in STOP
+  stepperEnable(false); // makes sure the feeder driver is disabled in STOP
   if (previous == STATE_FORWARD) {
     Serial.println("Sensors done!");
   }
@@ -189,7 +255,32 @@ void handle_forward()        { driveForward(); }
 void handle_back()           { driveBackward(); } // timer based, need to implement; use millis()
 
 // Shooters are driven by controller, handling flywheel DC and stepper
-void handle_shoot1()         { stopAll(); while (1) {} } // hang for debugging
+void handle_shoot1(){ 
+  static bool started = false;
+  static unsigned long t0 = 0;
+
+   if (!started) {
+    started = true;
+    t0 = millis();
+
+    stopAll();                 // stops the drivetrain before shooting
+    Serial.println("SHOOT1: flywheels ON (spinup)");
+    flywheelsOn();
+  }
+
+  if (millis() - t0 >= FLY_SPINUP_MS) {  // waits for the flywheels to get up to speed
+    Serial.println("SHOOT1: feeding stepper");
+    feedSteps(FEED_STEPS);               // rotates the feeder stepper to push one shot in
+
+    Serial.println("SHOOT1: flywheels OFF");
+    flywheelsOff();
+
+    started = false;
+    previous = state;
+    state = STATE_STOP;        
+  }
+}
+  
 void handle_shoot2()         { stopAll(); }
 void handle_shoot3()         { stopAll(); }
 void handle_return_home()    { driveBackward(); } // again, might need backwards and left
@@ -277,9 +368,9 @@ uint8_t test_for_hog_line() {
 
 void resp_to_hog_lines() {
   if (state == STATE_FORWARD) {
-    Serial.println("Hog line detected – stopping");
+    Serial.println("Hog line detected – starting shoot1"); // sends the FSM into the shooting state
     previous = state;
-    state = STATE_STOP;
+    state = STATE_SHOOT1;
   }
 }
 
