@@ -7,6 +7,14 @@
 #include <Wire.h>
 #include <Metro.h>
 
+// TODO
+// add commands for strafe left and diag BL
+// fine tune motors
+// add stepper motor functionality and dc flywheel control
+// DC motor drive: EN A & B share one wire; In1 & In4 share high pin; In2 & In3 share low pin, 3 pins total
+// Turn off enable when done
+// Stepper motor:
+
 // ── I2C ─────────────────────────────────────────────────────
 #define PERIPHERAL_ADDR  8   // I2C address of the peripheral
 
@@ -16,6 +24,9 @@
 #define CMD_BACKWARD      2
 #define CMD_STRAFE_RIGHT  3
 #define CMD_ROTATE_RIGHT  4
+#define CMD_DIAG_BL       5
+#define CMD_STRAFE_LEFT   6
+#define CMD_VEER_RIGHT    7
 
 // ── Ultrasonic pins ──────────────────────────────────────────
 #define TRIG_PIN_1  9
@@ -24,21 +35,21 @@
 #define ECHO_PIN_2  12
 
 // Wall distance thresholds (cm)
-#define LEFT_WALL  45
-#define BACK_WALL  35
+#define LEFT_WALL  25
+#define BACK_WALL  15
 
 // ── Line / Hog sensors ───────────────────────────────────────
-#define LINE_FRONT  A1
-#define LINE_BACK   A3
-#define HOG_LEFT    A2
-#define HOG_RIGHT   A0
+#define LINE_FRONT  A2
+#define LINE_BACK   A0
+#define HOG_LEFT    A1
+#define HOG_RIGHT   A3
 
 // ── Limit switches ───────────────────────────────────────────
 #define LIMIT_BACK  2
 #define LIMIT_LEFT  3
 
 // ── Constants ────────────────────────────────────────────────
-#define LINE_THRESHOLD      300
+#define LINE_THRESHOLD      550
 #define LED_TIME_INTERVAL  1000
 
 // ── FSM ──────────────────────────────────────────────────────
@@ -92,7 +103,7 @@ bool sendMotorCommand(uint8_t cmd) {
   if (resp == "OK") {
     return true;
   } else {
-    Serial.print("[I2C] Peripheral responded: "); Serial.println(resp);
+    // Serial.print("[I2C] Peripheral responded: "); Serial.println(resp);
     return false;
   }
 }
@@ -102,7 +113,10 @@ void stopAll()       { sendMotorCommand(CMD_STOP);         }
 void driveForward()  { sendMotorCommand(CMD_FORWARD);      }
 void driveBackward() { sendMotorCommand(CMD_BACKWARD);     }
 void strafeRight()   { sendMotorCommand(CMD_STRAFE_RIGHT); }
+void strafeLeft()    { sendMotorCommand(CMD_STRAFE_LEFT);  }
 void rotateRight()   { sendMotorCommand(CMD_ROTATE_RIGHT); }
+void motorBackLeft() { sendMotorCommand(CMD_DIAG_BL);      }
+void veerRight()     { sendMotorCommand(CMD_VEER_RIGHT);   }
 
 // ────────────────────────────────────────────────────────────
 //  Setup
@@ -169,10 +183,10 @@ void handle_stop() {
 }
 
 void handle_orientation()    { rotateRight(); } // spin for corner
-void handle_corner()         { driveBackward(); } // backup into wall; TODO make diagonal movement if possible (back and left)
+void handle_corner()         { strafeLeft(); } // strafe into left wall; 
 void handle_find_centreline(){ strafeRight(); }
 void handle_forward()        { driveForward(); }
-void handle_back()           { driveBackward(); }
+void handle_back()           { driveBackward(); } // timer based, need to implement; use millis()
 
 // Shooters are driven by controller, handling flywheel DC and stepper
 void handle_shoot1()         { stopAll(); while (1) {} } // hang for debugging
@@ -218,7 +232,7 @@ void resp_to_orient() {
 uint8_t test_for_wall() {
   if (state == STATE_CORNER) {
     Serial.println("Checking for wall");
-    if (limitLeftTriggered && limitBackTriggered) return true;
+    if (limitLeftTriggered) return true;
   }
   return false;
 }
@@ -233,11 +247,11 @@ void resp_to_wall() {
 
 uint8_t test_for_center() {
   if (state == STATE_FIND_CENTRELINE) {
-    int frontVal = digitalRead(LINE_FRONT);
+    int frontVal = analogRead(LINE_FRONT);
     int backVal  = analogRead(LINE_BACK);
     Serial.print("Front Sensor: "); Serial.print(frontVal);
     Serial.print("\t Back Sensor: "); Serial.println(backVal);
-    if (frontVal && backVal < LINE_THRESHOLD) return true;
+    if (frontVal > LINE_THRESHOLD && backVal > LINE_THRESHOLD) return true;
   }
   return false;
 }
@@ -256,7 +270,7 @@ uint8_t test_for_hog_line() {
     int rightVal = analogRead(HOG_RIGHT);
     Serial.print("Hog Left: "); Serial.print(leftVal);
     Serial.print("\t Hog Right: "); Serial.println(rightVal);
-    if (leftVal < LINE_THRESHOLD && rightVal < LINE_THRESHOLD) return true;
+    if (leftVal > LINE_THRESHOLD && rightVal > LINE_THRESHOLD) return true;
   }
   return false;
 }
