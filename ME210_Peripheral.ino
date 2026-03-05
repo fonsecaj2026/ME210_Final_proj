@@ -16,6 +16,9 @@
 #define CMD_BACKWARD      2
 #define CMD_STRAFE_RIGHT  3
 #define CMD_ROTATE_RIGHT  4
+#define CMD_DIAG_BL       5
+#define CMD_STRAFE_LEFT   6
+#define CMD_VEER_RIGHT    7
 
 // ── Motor objects ────────────────────────────────────────────
 AF_DCMotor FL(1);
@@ -23,8 +26,8 @@ AF_DCMotor FR(4);
 AF_DCMotor RL(2);
 AF_DCMotor RR(3);
 
-int fast_speed = 180;
-int med_speed  = 130;
+int fast_speed = 200;
+// int med_speed  = 130;
 int slow_speed =  90;
 
 // ── Response buffer ──────────────────────────────────────────
@@ -50,29 +53,61 @@ void motorSetAllSpeed(int spd) {
 }
 
 void motorDriveForward() {
-  FL.setSpeed(med_speed);  FR.setSpeed(fast_speed);
-  RL.setSpeed(med_speed);  RR.setSpeed(fast_speed);
+  FL.setSpeed(160);  FR.setSpeed(200);
+  RL.setSpeed(160);  RR.setSpeed(200);
   FL.run(FORWARD);  FR.run(FORWARD);
   RL.run(FORWARD);  RR.run(FORWARD);
 }
 
 void motorDriveBackward() {
-  motorSetAllSpeed(fast_speed);
+  // motorSetAllSpeed(fast_speed);
+  FL.setSpeed(160);  FR.setSpeed(200);
+  RL.setSpeed(160);  RR.setSpeed(200);
   FL.run(BACKWARD);  FR.run(BACKWARD);
   RL.run(BACKWARD);  RR.run(BACKWARD);
 }
 
 void motorStrafeRight() {
-  motorSetAllSpeed(fast_speed);
+  motorSetAllSpeed(220);
   FL.run(FORWARD);   FR.run(BACKWARD);
   RL.run(BACKWARD);  RR.run(FORWARD);
 }
 
 void motorRotateRight() {
-  motorSetAllSpeed(fast_speed);
+  motorSetAllSpeed(250);
   FL.run(FORWARD);   FR.run(BACKWARD);
   RL.run(FORWARD);   RR.run(BACKWARD);
 }
+
+// ────────────────────────────────────────────────────────────
+// Additional directions; TODO ADD COMMAND HANDLING
+// ────────────────────────────────────────────────────────────
+void motorStrafeLeft() {
+  motorSetAllSpeed(220);
+  FL.run(BACKWARD);  FR.run(FORWARD);
+  RL.run(FORWARD);  RR.run(BACKWARD);
+}
+
+// Diagonal back and left // untested
+void motorBackLeft() {
+  // motorSetAllSpeed(220);
+  FL.setSpeed(230);  FR.setSpeed(190);
+  RL.setSpeed(190);  RR.setSpeed(230);
+
+  FL.run(BACKWARD);  FR.run(FORWARD);
+  RL.run(FORWARD);  RR.run(BACKWARD);
+}
+
+void motorVeerRight() {
+  // motorSetAllSpeed(220);
+  FL.setSpeed(220);  FR.setSpeed(220);
+  RL.setSpeed(0);  RR.setSpeed(0);
+
+  FL.run(FORWARD);  FR.run(BACKWARD);
+  RL.run(RELEASE);   RR.run(RELEASE);
+}
+
+
 
 // ────────────────────────────────────────────────────────────
 //  I2C callbacks
@@ -104,8 +139,17 @@ void onReceive(int numBytes) {
     case CMD_STRAFE_RIGHT:
       motorStrafeRight();
       break;
+    case CMD_STRAFE_LEFT:
+      motorStrafeLeft();
+      break;
     case CMD_ROTATE_RIGHT:
       motorRotateRight();
+      break;
+    case CMD_DIAG_BL:
+      motorBackLeft();
+      break;
+    case CMD_STRAFE_RIGHT:
+      motorVeerRight();
       break;
     default:
       // Unknown command
@@ -132,9 +176,9 @@ void onRequest() {
 //  Setup
 // ────────────────────────────────────────────────────────────
 void setup() {
-  Serial.begin(115200);
+  // Serial.begin(115200);
   // maybe don't have serial
-  while (!Serial) {}
+  // while (!Serial) {}
 
   motorStopAll();
 
@@ -142,7 +186,7 @@ void setup() {
   Wire.onReceive(onReceive);
   Wire.onRequest(onRequest);
 
-  Serial.println("Peripheral ready – waiting for commands");
+  // Serial.println("Peripheral ready – waiting for commands");
 }
 
 // ────────────────────────────────────────────────────────────
