@@ -148,7 +148,7 @@ void onReceive(int numBytes) {
     case CMD_DIAG_BL:
       motorBackLeft();
       break;
-    case CMD_STRAFE_RIGHT:
+    case CMD_VEER_RIGHT:
       motorVeerRight();
       break;
     default:
