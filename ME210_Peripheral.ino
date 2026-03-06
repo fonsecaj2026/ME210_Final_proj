@@ -54,9 +54,9 @@ void motorSetAllSpeed(int spd) {
 
 void motorDriveForward() {
   FL.setSpeed(240);
-  FR.setSpeed(210);
+  FR.setSpeed(215);
   RL.setSpeed(240);
-  RR.setSpeed(210);
+  RR.setSpeed(215);
   // motorSetAllSpeed(220);
 
   FL.run(FORWARD);
@@ -81,8 +81,8 @@ void motorDriveBackward() {
 void motorStrafeRight() {
   FL.setSpeed(255);
   FR.setSpeed(255);
-  RL.setSpeed(245);
-  RR.setSpeed(245);
+  RL.setSpeed(255);
+  RR.setSpeed(255);
 
   FL.run(FORWARD);
   FR.run(BACKWARD);
@@ -106,10 +106,18 @@ void motorRotateRight() {
 // Additional directions; TODO ADD COMMAND HANDLING
 // ────────────────────────────────────────────────────────────
 void motorStrafeLeft() {
-  motorSetAllSpeed(220);
-  FL.run(BACKWARD);  FR.run(FORWARD);
-  RL.run(FORWARD);  RR.run(BACKWARD);
+  FL.setSpeed(255);
+  FR.setSpeed(255);
+  RL.setSpeed(245);
+  RR.setSpeed(245);
+
+  FL.run(BACKWARD);
+  FR.run(FORWARD);
+  RL.run(FORWARD);
+  RR.run(BACKWARD);
 }
+
+
 
 // Diagonal back and left // untested
 void motorBackLeft() {
@@ -165,6 +173,7 @@ void onReceive(int numBytes) {
       break;
     case CMD_STRAFE_RIGHT:
       motorStrafeRight();
+      // motorStrafeLeft();
       break;
     case CMD_STRAFE_LEFT:
       motorStrafeLeft();
