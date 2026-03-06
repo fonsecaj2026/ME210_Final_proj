@@ -53,9 +53,9 @@ void motorSetAllSpeed(int spd) {
 }
 
 void motorDriveForward() {
-  FL.setSpeed(205);
+  FL.setSpeed(245);
   FR.setSpeed(200);
-  RL.setSpeed(205);
+  RL.setSpeed(245);
   RR.setSpeed(200);
   // motorSetAllSpeed(220);
 
