@@ -19,7 +19,7 @@ int flySpeed = 180;        // flywheel speed (0-255)
 #define FLY_SPINUP_MS   1200
 #define FEED_DIR        HIGH
 #define FEED_STEPS      200
-#define STEP_PULSE_US   800
+#define STEP_PULSE_US   1000
 
 
 // ------------------------------------------------------------
