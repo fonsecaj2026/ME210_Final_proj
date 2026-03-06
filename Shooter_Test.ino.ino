@@ -65,7 +65,7 @@ void feedSteps(int steps) {
     delayMicroseconds(STEP_PULSE_US);
   }
 
-  stepperEnable(false);
+  //stepperEnable(false);
 }
 
 
