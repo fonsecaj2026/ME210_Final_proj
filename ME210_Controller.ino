@@ -48,7 +48,7 @@
 #define LIMIT_LEFT  3
 
 // ── Constants ────────────────────────────────────────────────
-#define LINE_THRESHOLD      550
+#define LINE_THRESHOLD     40 //400
 #define LED_TIME_INTERVAL  1000
 
 // -------- Flywheel motor driver pins --------
@@ -158,6 +158,15 @@ void setup() {
 //  Main loop
 // ────────────────────────────────────────────────────────────
 void loop() {
+  // ir test:
+  // while(1) {
+  //   int leftVal  = analogRead(HOG_LEFT);
+  //     // int rightVal = analogRead(HOG_RIGHT);
+  //   Serial.print("Hog Left: "); Serial.println(leftVal);
+  //   delay(10);
+  // }
+
+
   checkGlobalEvents();
   switch (state) {
     case STATE_STOP:             handle_stop();            break;
@@ -228,7 +237,7 @@ uint8_t test_for_scan() {
     if (dist < min_dist) {
       min_dist = dist;
     }
-    if (spin_delay + 5000 < millis()) {
+    if (spin_delay + 5200 < millis()) {
       return true;
     }
   }
@@ -257,7 +266,7 @@ uint8_t test_for_orient() {
     int dist = curr_L + curr_B;
 
     // test tolarance asap
-    if (dist <= min_dist + 2) {
+    if (dist <= min_dist) {
       return true;
     }
   }
