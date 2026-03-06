@@ -34,7 +34,7 @@
 #define ECHO_PIN_2  12
 
 // Wall distance thresholds (cm)
-#define LEFT_WALL  14
+#define LEFT_WALL  18
 #define BACK_WALL  8
 
 // ── Line / Hog sensors ───────────────────────────────────────
@@ -61,9 +61,17 @@
 #define DRV_STEP    8    // step pulse
 #define DRV_DIR     13   // stepper direction
 
+// -------- Shooting tuning -------------------
+int flySpeed = 180;        // flywheel speed (0-255)
+
+#define FLY_SPINUP_MS   2000
+#define FEED_DIR        HIGH
+#define FEED_STEPS      350
+#define STEP_PULSE_US   1000
+
 // ── FSM ──────────────────────────────────────────────────────
 typedef enum {
-  STATE_STOP, STATE_ORIENTATION, STATE_CORNER,
+  STATE_STOP, STATE_SCAN, STATE_ORIENTATION, STATE_CORNER,
   STATE_FIND_CENTRELINE, STATE_FORWARD, STATE_CORRECT_LINE,
   STATE_BACK, STATE_SHOOT1, STATE_SHOOT2,
   STATE_SHOOT3, STATE_RETURN_HOME
@@ -73,6 +81,8 @@ States_t state;
 States_t previous;
 static Metro metTimer0 = Metro(LED_TIME_INTERVAL);
 long hog_delay = 0;
+long spin_delay = 0;
+int min_dist = 2000;
 
 // ── Limit-switch ISR flags ───────────────────────────────────
 volatile bool limitBackTriggered = false;
@@ -137,8 +147,12 @@ void setup() {
   pinMode(HOG_LEFT,   INPUT);
   pinMode(HOG_RIGHT,  INPUT);
   stopAll();
+  // activate stepper
+  stepperEnable(true);
+  delay(10000); // 10 sec
   Serial.println("Controller ready – starting FSM");
-  state = STATE_ORIENTATION;
+  spin_delay = millis();
+  state = STATE_SCAN;
 }
 // ────────────────────────────────────────────────────────────
 //  Main loop
@@ -147,6 +161,7 @@ void loop() {
   checkGlobalEvents();
   switch (state) {
     case STATE_STOP:             handle_stop();            break;
+    case STATE_SCAN:             handle_scan();            break;
     case STATE_ORIENTATION:      handle_orientation();     break;
     case STATE_CORNER:           handle_corner();          break;
     case STATE_FIND_CENTRELINE:  handle_find_centreline(); break;
@@ -174,7 +189,8 @@ void handle_stop() {
   }
 }
 
-void handle_orientation()    { rotateRight(); } // spin for corner
+void handle_scan()           { rotateRight(); } // complete a full spin (time this)
+void handle_orientation()    { rotateRight(); } // spin for minimum
 void handle_corner()         { strafeLeft(); }  // strafe into left wall
 void handle_find_centreline(){ strafeRight(); }
 void handle_forward()        { driveForward(); }
@@ -182,7 +198,7 @@ void handle_correct_line()   { veerRight(); }
 void handle_back()           { driveBackward(); } // timer based, need to implement; use millis()
 
 // Shooters are driven by controller, handling flywheel DC and stepper
-void handle_shoot1()         { stopAll(); while (1) {} } // hang for debugging
+void handle_shoot1()         { stopAll(); shootOnce(); while (1) {} } // hang for debugging
 void handle_shoot2()         { stopAll(); }
 void handle_shoot3()         { stopAll(); }
 void handle_return_home()    { driveBackward(); } // again, might need backwards and left
@@ -203,6 +219,30 @@ long getDistance(int trigPin, int echoPin) {
 // ────────────────────────────────────────────────────────────
 //  Event tests & responses
 // ────────────────────────────────────────────────────────────
+uint8_t test_for_scan() {
+  if (state == STATE_SCAN) {
+    int curr_L = getDistance(TRIG_PIN_1, ECHO_PIN_1);
+    int curr_B = getDistance(TRIG_PIN_2, ECHO_PIN_2);
+    int dist = curr_L + curr_B;
+
+    if (dist < min_dist) {
+      min_dist = dist;
+    }
+    if (spin_delay + 5000 < millis()) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void resp_to_scan() {
+  if (state == STATE_SCAN) {
+    Serial.println("minima found");
+    previous = state;
+    state = STATE_ORIENTATION;
+  }
+}
+
 uint8_t test_for_orient() {
   if (state == STATE_ORIENTATION) {
     Serial.println("Searching for corner");
@@ -212,8 +252,12 @@ uint8_t test_for_orient() {
     // Serial.println(left);
     // Serial.print("back dist: ");
     // Serial.println(back);
-    if (getDistance(TRIG_PIN_1, ECHO_PIN_1) < LEFT_WALL &&
-        getDistance(TRIG_PIN_2, ECHO_PIN_2) < BACK_WALL) {
+    int curr_L = getDistance(TRIG_PIN_1, ECHO_PIN_1);
+    int curr_B = getDistance(TRIG_PIN_2, ECHO_PIN_2);
+    int dist = curr_L + curr_B;
+
+    // test tolarance asap
+    if (dist <= min_dist + 2) {
       return true;
     }
   }
@@ -333,11 +377,12 @@ void resp_to_back() {
   if (state == STATE_BACK) {
     Serial.println("back up for hog line again");
     previous = state;
-    state = STATE_STOP;
+    state = STATE_SHOOT1;
   }
 }
 
 void checkGlobalEvents() {
+  if (test_for_scan())           resp_to_scan();
   if (test_for_orient())         resp_to_orient();
   if (test_for_wall())           resp_to_wall();
   if (test_for_center())         resp_to_center();
@@ -348,3 +393,66 @@ void checkGlobalEvents() {
 }
 
 // Final code for shooting
+// ------------------------------------------------------------
+// Turn flywheels ON at the current speed
+// ------------------------------------------------------------
+void flywheelsOn() {
+  digitalWrite(SHOOT_HI, HIGH);
+  digitalWrite(SHOOT_LO, LOW);
+  analogWrite(SHOOT_PWM, flySpeed);
+}
+
+
+// ------------------------------------------------------------
+// Turn flywheels OFF
+// ------------------------------------------------------------
+void flywheelsOff() {
+  analogWrite(SHOOT_PWM, 0);
+  digitalWrite(SHOOT_HI, LOW);
+  digitalWrite(SHOOT_LO, LOW);
+}
+
+
+// ------------------------------------------------------------
+// Enable / disable stepper driver
+// ------------------------------------------------------------
+void stepperEnable(bool en) {
+  digitalWrite(DRV_EN, en ? LOW : HIGH);
+}
+
+
+// ------------------------------------------------------------
+// Feed the stepper a set number of steps
+// ------------------------------------------------------------
+void feedSteps(int steps) {
+
+  digitalWrite(DRV_DIR, FEED_DIR);
+  stepperEnable(true);
+
+  for (int i = 0; i < steps; i++) {
+    digitalWrite(DRV_STEP, HIGH);
+    delayMicroseconds(STEP_PULSE_US);
+    digitalWrite(DRV_STEP, LOW);
+    delayMicroseconds(STEP_PULSE_US);
+  }
+
+  //stepperEnable(false);
+}
+
+
+// ------------------------------------------------------------
+// Full shooting sequence
+// ------------------------------------------------------------
+void shootOnce() {
+
+  Serial.println("Flywheels ON");
+  flywheelsOn();
+
+  delay(FLY_SPINUP_MS);
+
+  Serial.println("Feeding stepper");
+  feedSteps(FEED_STEPS);
+
+  Serial.println("Flywheels OFF");
+  flywheelsOff();
+}
