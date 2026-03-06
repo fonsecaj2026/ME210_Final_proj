@@ -19,6 +19,7 @@
 #define CMD_DIAG_BL       5
 #define CMD_STRAFE_LEFT   6
 #define CMD_VEER_RIGHT    7
+#define CMD_SHOOT         8
 
 // ── Motor objects ────────────────────────────────────────────
 AF_DCMotor FL(2);
@@ -52,10 +53,11 @@ void motorSetAllSpeed(int spd) {
 }
 
 void motorDriveForward() {
-  FL.setSpeed(160);
-  FR.setSpeed(220);
-  RL.setSpeed(200);
-  RR.setSpeed(220);
+  FL.setSpeed(240);
+  FR.setSpeed(210);
+  RL.setSpeed(240);
+  RR.setSpeed(210);
+  // motorSetAllSpeed(220);
 
   FL.run(FORWARD);
   FR.run(FORWARD);
@@ -64,11 +66,11 @@ void motorDriveForward() {
 }
 
 void motorDriveBackward() {
-  // motorSetAllSpeed(fast_speed);
-  FL.setSpeed(160);
-  FR.setSpeed(220);
-  RL.setSpeed(200);
-  RR.setSpeed(220);
+  motorSetAllSpeed(220);
+  // FL.setSpeed(160);
+  // FR.setSpeed(220);
+  // RL.setSpeed(200);
+  // RR.setSpeed(220);
 
   FL.run(BACKWARD);
   FR.run(BACKWARD);
@@ -128,6 +130,10 @@ void motorVeerRight() {
   RL.run(RELEASE);   RR.run(RELEASE);
 }
 
+void motorShoot() {
+  motorStopAll();
+}
+
 
 
 // ────────────────────────────────────────────────────────────
@@ -169,9 +175,9 @@ void onReceive(int numBytes) {
     case CMD_DIAG_BL:
       motorBackLeft();
       break;
-    case CMD_STRAFE_RIGHT:
-      motorVeerRight();
-      break;
+    // case CMD_STRAFE_RIGHT:
+    //   motorVeerRight();
+    //   break;
     default:
       // Unknown command
       motorStopAll();   // fail-safe: stop motors
