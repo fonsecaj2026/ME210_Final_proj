@@ -1,12 +1,12 @@
 #include <AFMotor.h>
 
 // DC Motors for Mecanum Wheels
-AF_DCMotor FL(1);
-AF_DCMotor FR(4);
-AF_DCMotor RL(2);
-AF_DCMotor RR(3);
+AF_DCMotor FL(2);
+AF_DCMotor FR(1);
+AF_DCMotor RL(3);
+AF_DCMotor RR(4);
 
-int fast_speed  = 200;
+int fast_speed  = 220;
 int slow_speed  = 90;
 ;
 
@@ -26,9 +26,9 @@ void setAllSpeed(int spd){
 
 void driveForward(){
   FL.setSpeed(160);
-  FR.setSpeed(200);
-  RL.setSpeed(160);
-  RR.setSpeed(200);
+  FR.setSpeed(220);
+  RL.setSpeed(200);
+  RR.setSpeed(220);
 
   FL.run(FORWARD);
   FR.run(FORWARD);
@@ -38,9 +38,9 @@ void driveForward(){
 
 void driveBackward(){
   FL.setSpeed(160);
-  FR.setSpeed(200);
-  RL.setSpeed(160);
-  RR.setSpeed(200);
+  FR.setSpeed(220);
+  RL.setSpeed(200);
+  RR.setSpeed(220);
 
   FL.run(BACKWARD);
   FR.run(BACKWARD);
@@ -49,21 +49,37 @@ void driveBackward(){
 }
 
 void strafeRight(){
-  setAllSpeed(220);
+  // setAllSpeed(255);
+  FL.setSpeed(255);
+  FR.setSpeed(255);
+  RL.setSpeed(245);
+  RR.setSpeed(245);
+
   FL.run(FORWARD);
   FR.run(BACKWARD);
   RL.run(BACKWARD);
   RR.run(FORWARD);
 }
 
+// void strafeRight(){
+//   setAllSpeed(255);
+//   FL.run(FORWARD);
+//   FR.run(BACKWARD);
+//   RL.run(BACKWARD);
+//   RR.run(FORWARD);
+// }
+
 void rotateRight(){
-  setAllSpeed(220);
+  FL.setSpeed(210);
+  FR.setSpeed(210);
+  RL.setSpeed(255);
+  RR.setSpeed(255);
 
 
-  FL.run(FORWARD);
-  FR.run(BACKWARD);
-  RL.run(FORWARD);
-  RR.run(BACKWARD);
+  FL.run(BACKWARD);
+  FR.run(FORWARD);
+  RL.run(BACKWARD);
+  RR.run(FORWARD);
 }
 
 void setup() {
@@ -105,7 +121,7 @@ void loop() {
     else if (input == "S") {
       Serial.println("Strafe Right");
       strafeRight();
-      delay(3000);
+      delay(5000);
       stopAll();
       return;
     }
