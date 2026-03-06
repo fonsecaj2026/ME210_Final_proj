@@ -21,14 +21,13 @@
 #define CMD_VEER_RIGHT    7
 
 // ── Motor objects ────────────────────────────────────────────
-AF_DCMotor FL(1);
-AF_DCMotor FR(4);
-AF_DCMotor RL(2);
-AF_DCMotor RR(3);
+AF_DCMotor FL(2);
+AF_DCMotor FR(1);
+AF_DCMotor RL(3);
+AF_DCMotor RR(4);
 
-int fast_speed = 200;
-// int med_speed  = 130;
-int slow_speed =  90;
+int fast_speed  = 220;
+int slow_speed  = 90;
 
 // ── Response buffer ──────────────────────────────────────────
 // onRequest() is called from ISR context – keep it simple.
@@ -53,30 +52,52 @@ void motorSetAllSpeed(int spd) {
 }
 
 void motorDriveForward() {
-  FL.setSpeed(160);  FR.setSpeed(200);
-  RL.setSpeed(160);  RR.setSpeed(200);
-  FL.run(FORWARD);  FR.run(FORWARD);
-  RL.run(FORWARD);  RR.run(FORWARD);
+  FL.setSpeed(160);
+  FR.setSpeed(220);
+  RL.setSpeed(200);
+  RR.setSpeed(220);
+
+  FL.run(FORWARD);
+  FR.run(FORWARD);
+  RL.run(FORWARD);
+  RR.run(FORWARD);
 }
 
 void motorDriveBackward() {
   // motorSetAllSpeed(fast_speed);
-  FL.setSpeed(160);  FR.setSpeed(200);
-  RL.setSpeed(160);  RR.setSpeed(200);
-  FL.run(BACKWARD);  FR.run(BACKWARD);
-  RL.run(BACKWARD);  RR.run(BACKWARD);
+  FL.setSpeed(160);
+  FR.setSpeed(220);
+  RL.setSpeed(200);
+  RR.setSpeed(220);
+
+  FL.run(BACKWARD);
+  FR.run(BACKWARD);
+  RL.run(BACKWARD);
+  RR.run(BACKWARD);
 }
 
 void motorStrafeRight() {
-  motorSetAllSpeed(220);
-  FL.run(FORWARD);   FR.run(BACKWARD);
-  RL.run(BACKWARD);  RR.run(FORWARD);
+  FL.setSpeed(255);
+  FR.setSpeed(255);
+  RL.setSpeed(245);
+  RR.setSpeed(245);
+
+  FL.run(FORWARD);
+  FR.run(BACKWARD);
+  RL.run(BACKWARD);
+  RR.run(FORWARD);
 }
 
 void motorRotateRight() {
-  motorSetAllSpeed(250);
-  FL.run(FORWARD);   FR.run(BACKWARD);
-  RL.run(FORWARD);   RR.run(BACKWARD);
+  FL.setSpeed(255);
+  FR.setSpeed(255);
+  RL.setSpeed(245);
+  RR.setSpeed(245);
+
+  FL.run(FORWARD);
+  FR.run(BACKWARD);
+  RL.run(BACKWARD);
+  RR.run(FORWARD);
 }
 
 // ────────────────────────────────────────────────────────────
