@@ -71,7 +71,7 @@ int flySpeed = 180;        // flywheel speed (0-255)
 
 // ── FSM ──────────────────────────────────────────────────────
 typedef enum {
-  STATE_STOP, STATE_SCAN, STATE_ORIENTATION, STATE_CORNER,
+  STATE_STOP, STATE_ORIENTATION, STATE_CORNER,
   STATE_FIND_CENTRELINE, STATE_FORWARD, STATE_CORRECT_LINE,
   STATE_BACK, STATE_SHOOT1, STATE_SHOOT2,
   STATE_SHOOT3, STATE_RETURN_HOME
@@ -81,8 +81,8 @@ States_t state;
 States_t previous;
 static Metro metTimer0 = Metro(LED_TIME_INTERVAL);
 long hog_delay = 0;
-long spin_delay = 0;
-int min_dist = 2000;
+// long spin_delay = 0;
+// int min_dist = 2000;
 
 // ── Limit-switch ISR flags ───────────────────────────────────
 volatile bool limitBackTriggered = false;
@@ -151,8 +151,8 @@ void setup() {
   stepperEnable(true);
   delay(10000); // 10 sec
   Serial.println("Controller ready – starting FSM");
-  spin_delay = millis();
-  state = STATE_SCAN;
+  // spin_delay = millis();
+  state = STATE_ORIENTATION;
 }
 // ────────────────────────────────────────────────────────────
 //  Main loop
@@ -161,7 +161,7 @@ void loop() {
   checkGlobalEvents();
   switch (state) {
     case STATE_STOP:             handle_stop();            break;
-    case STATE_SCAN:             handle_scan();            break;
+    // case STATE_SCAN:             handle_scan();            break;
     case STATE_ORIENTATION:      handle_orientation();     break;
     case STATE_CORNER:           handle_corner();          break;
     case STATE_FIND_CENTRELINE:  handle_find_centreline(); break;
@@ -189,7 +189,7 @@ void handle_stop() {
   }
 }
 
-void handle_scan()           { rotateRight(); } // complete a full spin (time this)
+// void handle_scan()           { rotateRight(); } // complete a full spin (time this)
 void handle_orientation()    { rotateRight(); } // spin for minimum
 void handle_corner()         { strafeLeft(); }  // strafe into left wall
 void handle_find_centreline(){ strafeRight(); }
@@ -219,29 +219,29 @@ long getDistance(int trigPin, int echoPin) {
 // ────────────────────────────────────────────────────────────
 //  Event tests & responses
 // ────────────────────────────────────────────────────────────
-uint8_t test_for_scan() {
-  if (state == STATE_SCAN) {
-    int curr_L = getDistance(TRIG_PIN_1, ECHO_PIN_1);
-    int curr_B = getDistance(TRIG_PIN_2, ECHO_PIN_2);
-    int dist = curr_L + curr_B;
+// uint8_t test_for_scan() {
+//   if (state == STATE_SCAN) {
+//     int curr_L = getDistance(TRIG_PIN_1, ECHO_PIN_1);
+//     int curr_B = getDistance(TRIG_PIN_2, ECHO_PIN_2);
+//     int dist = curr_L + curr_B;
 
-    if (dist < min_dist) {
-      min_dist = dist;
-    }
-    if (spin_delay + 5000 < millis()) {
-      return true;
-    }
-  }
-  return false;
-}
+//     if (dist < min_dist) {
+//       min_dist = dist;
+//     }
+//     if (spin_delay + 5000 < millis()) {
+//       return true;
+//     }
+//   }
+//   return false;
+// }
 
-void resp_to_scan() {
-  if (state == STATE_SCAN) {
-    Serial.println("minima found");
-    previous = state;
-    state = STATE_ORIENTATION;
-  }
-}
+// void resp_to_scan() {
+//   if (state == STATE_SCAN) {
+//     Serial.println("minima found");
+//     previous = state;
+//     state = STATE_ORIENTATION;
+//   }
+// }
 
 uint8_t test_for_orient() {
   if (state == STATE_ORIENTATION) {
@@ -252,12 +252,9 @@ uint8_t test_for_orient() {
     // Serial.println(left);
     // Serial.print("back dist: ");
     // Serial.println(back);
-    int curr_L = getDistance(TRIG_PIN_1, ECHO_PIN_1);
-    int curr_B = getDistance(TRIG_PIN_2, ECHO_PIN_2);
-    int dist = curr_L + curr_B;
-
-    // test tolarance asap
-    if (dist <= min_dist + 2) {
+    int left = getDistance(TRIG_PIN_1, ECHO_PIN_1);
+    int back = getDistance(TRIG_PIN_2, ECHO_PIN_2);
+    if (left <= LEFT_WALL && back <= BACK_WALL) {
       return true;
     }
   }
@@ -382,7 +379,7 @@ void resp_to_back() {
 }
 
 void checkGlobalEvents() {
-  if (test_for_scan())           resp_to_scan();
+  // if (test_for_scan())           resp_to_scan();
   if (test_for_orient())         resp_to_orient();
   if (test_for_wall())           resp_to_wall();
   if (test_for_center())         resp_to_center();
